@@ -54,6 +54,12 @@ Bottom level categories:
 
 - Added `PassthroughShaderEntryPoint::workgroup_memory_sizes` to configure dynamic threadgroup memory for MSL and metallib shaders. Use an empty slice for entry points without dynamic threadgroup memory.
 
+### Bug Fixes
+
+#### General
+
+- Fix pending buffer mappings incorrectly succeeding when the device is lost before they are processed. By @jinleili in [#10301](https://github.com/gfx-rs/wgpu/pull/10301).
+
 ## v30.0.1 (2026-08-21)
 
 ### Bug Fixes
