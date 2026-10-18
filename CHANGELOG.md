@@ -42,6 +42,12 @@ Bottom level categories:
 
 ## Unreleased
 
+### Changes
+
+#### Metal
+
+- Added `PassthroughShaderEntryPoint::workgroup_memory_sizes` to configure dynamic threadgroup memory for MSL and metallib shaders. Use an empty slice for entry points without dynamic threadgroup memory.
+
 ## v30.0.1 (2026-08-21)
 
 ### Bug Fixes
