@@ -715,7 +715,7 @@ static DEVICE_AND_QUEUE_HAVE_DIFFERENT_IDS: GpuTestConfiguration = GpuTestConfig
 #[cfg(not(wasm_test))]
 #[gpu_test]
 static FREE_UNUSED_COMMAND_ENCODERS: GpuTestConfiguration = GpuTestConfiguration::new()
-    .parameters(TestParameters::default().enable_noop())
+    .parameters(TestParameters::default())
     .run_async(|ctx| async move {
         let buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
@@ -723,7 +723,11 @@ static FREE_UNUSED_COMMAND_ENCODERS: GpuTestConfiguration = GpuTestConfiguration
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: true,
         });
-        buffer.slice(..).get_mapped_range_mut().fill(255);
+        buffer
+            .slice(..)
+            .get_mapped_range_mut()
+            .unwrap()
+            .copy_from_slice(&[255; 8]);
         buffer.unmap();
         let mut recording = ctx.device.create_command_encoder(&Default::default());
         let mut submitted = ctx.device.create_command_encoder(&Default::default());
@@ -734,6 +738,15 @@ static FREE_UNUSED_COMMAND_ENCODERS: GpuTestConfiguration = GpuTestConfiguration
         assert_eq!(ctx.device.free_unused_command_encoders(), 0);
         recording.clear_buffer(&buffer, 4, Some(4));
         ctx.queue.submit([recording.finish()]);
+        let reclaimed = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let completed = reclaimed.clone();
+        let device = ctx.device.clone();
+        ctx.queue.on_submitted_work_done(move || {
+            completed.store(
+                device.free_unused_command_encoders(),
+                std::sync::atomic::Ordering::Release,
+            );
+        });
         buffer
             .slice(..)
             .map_async(wgpu::MapMode::Read, |result| result.unwrap());
@@ -743,7 +756,7 @@ static FREE_UNUSED_COMMAND_ENCODERS: GpuTestConfiguration = GpuTestConfiguration
         })
         .await
         .unwrap();
-        assert_eq!(&*buffer.slice(..).get_mapped_range(), &[0; 8]);
+        assert_eq!(&*buffer.slice(..).get_mapped_range().unwrap(), &[0; 8]);
         buffer.unmap();
-        assert!(ctx.device.free_unused_command_encoders() > 0);
+        assert!(reclaimed.load(std::sync::atomic::Ordering::Acquire) > 0);
     });
