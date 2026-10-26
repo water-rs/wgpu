@@ -202,6 +202,10 @@ impl ContextWgpuCore {
         }
     }
 
+    pub fn device_free_unused_command_encoders(&self, device: &CoreDevice) -> usize {
+        self.0.device_free_unused_command_encoders(device.id)
+    }
+
     pub unsafe fn device_as_hal<A: hal::Api>(
         &self,
         device: &CoreDevice,

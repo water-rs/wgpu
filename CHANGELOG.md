@@ -42,6 +42,12 @@ Bottom level categories:
 
 ## Unreleased
 
+### Added/New Features
+
+#### General
+
+- Added native `Device::free_unused_command_encoders` to release cached command-buffer storage without waiting for the GPU.
+
 ### Changes
 
 #### Metal

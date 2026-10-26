@@ -49,4 +49,11 @@ impl CommandAllocator {
         let mut free_encoders = self.free_encoders.lock();
         free_encoders.push(encoder);
     }
+
+    pub(crate) fn free_unused(&self) -> usize {
+        let encoders = core::mem::take(&mut *self.free_encoders.lock());
+        let count = encoders.len();
+        drop(encoders);
+        count
+    }
 }

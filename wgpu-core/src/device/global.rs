@@ -1974,6 +1974,11 @@ impl Global {
         }
     }
 
+    pub fn device_free_unused_command_encoders(&self, device_id: DeviceId) -> usize {
+        let device = self.hub.devices.get(device_id);
+        device.command_allocator.free_unused()
+    }
+
     pub fn device_generate_allocator_report(
         &self,
         device_id: DeviceId,

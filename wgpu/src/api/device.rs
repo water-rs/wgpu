@@ -621,6 +621,23 @@ impl Device {
         self.inner.get_internal_counters()
     }
 
+    /// Release cached native command encoders and their command-buffer storage.
+    ///
+    /// This does not wait for the GPU. Only encoders already returned to the
+    /// device's free pool are released; recording and submitted commands remain
+    /// valid. Poll completed submissions first to reclaim their encoders too.
+    /// Returns the number of released encoders. Normal command encoding will
+    /// recreate this storage, so call this when trimming memory rather than
+    /// after every frame.
+    ///
+    /// # Panics
+    /// Panics if this device uses a custom backend instead of wgpu-core.
+    #[cfg(wgpu_core)]
+    pub fn free_unused_command_encoders(&self) -> usize {
+        let device = self.inner.as_core();
+        device.context.device_free_unused_command_encoders(device)
+    }
+
     /// Generate an GPU memory allocation report if the underlying backend supports it.
     ///
     /// Backends that do not support producing these reports return `None`. A backend may
