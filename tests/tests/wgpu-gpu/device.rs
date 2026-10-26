@@ -17,7 +17,11 @@ pub fn all_tests(vec: &mut Vec<GpuTestInitializer>) {
 
     #[cfg(not(wasm_test))]
     {
-        vec.extend([DEVICE_LIFETIME_CHECK, MULTIPLE_DEVICES]);
+        vec.extend([
+            DEVICE_LIFETIME_CHECK,
+            MULTIPLE_DEVICES,
+            FREE_UNUSED_COMMAND_ENCODERS,
+        ]);
     }
 }
 
@@ -706,4 +710,40 @@ static DEVICE_AND_QUEUE_HAVE_DIFFERENT_IDS: GpuTestConfiguration = GpuTestConfig
         drop(queue);
         drop(device2);
         drop(queue2); // this would previously panic since we would try to use the Device ID to drop the Queue
+    });
+
+#[cfg(not(wasm_test))]
+#[gpu_test]
+static FREE_UNUSED_COMMAND_ENCODERS: GpuTestConfiguration = GpuTestConfiguration::new()
+    .parameters(TestParameters::default().enable_noop())
+    .run_async(|ctx| async move {
+        let buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: 8,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: true,
+        });
+        buffer.slice(..).get_mapped_range_mut().fill(255);
+        buffer.unmap();
+        let mut recording = ctx.device.create_command_encoder(&Default::default());
+        let mut submitted = ctx.device.create_command_encoder(&Default::default());
+        submitted.clear_buffer(&buffer, 0, Some(4));
+        ctx.queue.submit([submitted.finish()]);
+        drop(ctx.device.create_command_encoder(&Default::default()));
+        assert!(ctx.device.free_unused_command_encoders() > 0);
+        assert_eq!(ctx.device.free_unused_command_encoders(), 0);
+        recording.clear_buffer(&buffer, 4, Some(4));
+        ctx.queue.submit([recording.finish()]);
+        buffer
+            .slice(..)
+            .map_async(wgpu::MapMode::Read, |result| result.unwrap());
+        ctx.async_poll(wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        })
+        .await
+        .unwrap();
+        assert_eq!(&*buffer.slice(..).get_mapped_range(), &[0; 8]);
+        buffer.unmap();
+        assert!(ctx.device.free_unused_command_encoders() > 0);
     });
