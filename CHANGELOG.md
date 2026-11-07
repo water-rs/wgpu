@@ -61,6 +61,10 @@ Bottom level categories:
 - Fix pending buffer mappings incorrectly succeeding when the device is lost before they are processed. By @jinleili in [#10301](https://github.com/gfx-rs/wgpu/pull/10301).
 - When the backend reports the device lost while `Device::poll` queries submission progress, `Device::poll` no longer panics. It completes pending `Queue::on_submitted_work_done` callbacks and fails pending `map_async` calls with an error. By @lexoliu in [#XXXX](https://github.com/gfx-rs/wgpu/pull/XXXX).
 
+#### Metal
+
+- Report a command buffer that ends with an error, such as one terminated by the GPU watchdog, as a device loss instead of a successful completion. By @lexoliu in [#XXXX](https://github.com/gfx-rs/wgpu/pull/XXXX).
+
 ## v30.0.1 (2026-08-21)
 
 ### Bug Fixes
